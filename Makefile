@@ -1,43 +1,42 @@
 
-TARGET=welcome-chili-it.tex
+TARGET=welcome-it.rst
 
 DOT=$(wildcard images/*.dot)
-SVG=$(wildcard images/*.svg)
+SVG=$(wildcard images/*/*.svg)
 
-all: these
+all: project
 
-%.pdf: %.svg
-	inkscape --export-pdf $(@) $(<)
+project: $(TARGET:.rst=.pdf)
 
-%.aux: these
+%.tex: %.rst
+	rst2latex $(<) > $(@)
+
+#%.pdf: %.svg
+#	inkscape --export-pdf $(@) $(<)
+
+%.aux: project
 
 %.svg: %.dot
 
 	twopi -Tsvg -o$(@) $(<)
 
-bib: $(TARGET:.tex=.aux)
+bib: $(TARGET:.rst=.bbl)
 
-	bibtex $(TARGET:.tex=.aux)
+%.bbl: %.aux
 
-these: $(TARGET) $(SVG:.svg=.pdf) $(DOT:.dot=.pdf)
+	bibtex $(<)
+	touch $(<:.aux=.tex)
 
-	TEXFONTS=:./fonts TEXINPUTS=:./fonts:./sty pdflatex $(TARGET)
-	#TEXFONTS=:./fonts TEXINPUTS=:./sty pdflatex $(TARGET)
+%.pdf: %.tex $(SVG:.svg=.pdf) $(DOT:.dot=.pdf)
 
-# Check style:
-proof:
-
-	echo "weasel words: "
-	sh bin/weasel *.tex
-	echo
-	echo "passive voice: "
-	sh bin/passive *.tex
-	echo
-	echo "duplicates: "
-	perl bin/dups *.tex
+	pdflatex $(<)
+	touch $(<) #to make sure we can run several time pdflatex
 
 clean:
-	rm -f *.aux *.log *.snm *.out *.toc *.nav *intermediate *~ *.glo *.ist $(SVG:.svg=.pdf) $(DOT:.dot=.svg) $(DOT:.dot=.pdf)
+	rm -f *.bbl *.blg *.aux *.log *.snm *.out *.toc *.nav *intermediate *~ *.glo *.ist $(TARGET:.rst=.tex) $(SVG:.svg=.pdf) $(DOT:.dot=.svg) $(DOT:.dot=.pdf)
 
 distclean: clean
-	rm -f $(TARGET:.tex=.pdf)
+	rm -f $(TARGET:.rst=.pdf)
+
+# do not delete intermediary .tex files: we need them to re-run pdflatex if needed
+.SECONDARY: $(TARGET:.rst=.tex)
